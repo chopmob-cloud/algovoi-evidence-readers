@@ -14,6 +14,7 @@ catch a misreading, because they all inherit it.
 | --- | --- | --- | --- |
 | [`uncertain-effect/`](uncertain-effect/) | `corpora/vectors-uncertain-effect` in `probityai/agent-evidence-vectors`, 15 ordered checks over 54 cases | `6ba08cbe9d7f2819e3c47c84adee2fa65390e123` | 54 of 54 answered, 0 disagreements, reference rail also 54 of 54 |
 | [`request-effect/`](request-effect/) | `request-effect-join-fixture/v1` in `probityai/probityai.github.io`, 4 classifications and a closed set of 15 findings over 11 cases | `808041f552278a9708bd4903860e28fe07ef18d8` | 11 of 11 match `expected.json`, including every `must_not_claim` prohibition |
+| [`uncertain-effect-go/`](uncertain-effect-go/) | the same corpus and the same fifteen checks, in Go, built to a static binary | `6ba08cbe9d7f2819e3c47c84adee2fa65390e123` | 54 of 54 answered, 0 disagreements. A port of the Python reader by the same author, so a second language rather than a second author |
 
 Each directory carries its own README, its scripts, and a run record per revision
 with the pinned inputs, the logs, and what the figure does not establish.

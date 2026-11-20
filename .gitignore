@@ -1,3 +1,7 @@
 __pycache__/
 *.pyc
 .run/
+ue-go
+ue-go.exe
+*.exe
+.run/

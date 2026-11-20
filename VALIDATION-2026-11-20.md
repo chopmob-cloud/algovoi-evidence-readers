@@ -2,13 +2,13 @@
 
 Build, functional validation and security validation of this repository on VM2,
 in fresh Docker containers, against the staged tree
-`896915fa8c07fedf50f0c03de216696fe1928e32` (source tarball sha256
-`eede2b50846fc26abc914eed56d90e41c76c56b9ab5090b3985224e499b5b6f1`).
+`b1fd6e1cb8ba8e3bce52c114d608d68947f4e34f` (source tarball sha256
+`c984f6158bfaf95216b631762b9962e6540f12e2efd1100fcfcd642f6d875871`).
 
 That tree is an index tree, not a commit: it is what `git write-tree` produced
 from the staged change, and `git archive` shipped those bytes. The commit that
 adds this record carries the same tree plus two documents, this one and the README
-section that links it, and nothing else: `git diff --stat 896915fa HEAD` prints
+section that links it, and nothing else: `git diff --stat b1fd6e1c HEAD` prints
 those two paths. No script reads either, which is what lets the gate result
 transfer across the difference.
 
@@ -42,7 +42,9 @@ container is 3.11 and not 3.10.
 | `uncertain-effect/run.sh`: reference rail, reader rail, axis report, audit probes | PASS | PASS |
 | `uncertain-effect/check_reader_bites.sh`: mutation matrix | PASS | PASS |
 | `request-effect/run.sh`: digests, reader, bite matrix, named probes, canonicaliser | PASS | PASS |
-| **Total** | **8 of 8 stages** | **8 of 8 stages** |
+| `uncertain-effect-go/run.sh`: gofmt, vet, 40 probes, static build, both rails | PASS | PASS |
+| `uncertain-effect-go/check_checks_bite.sh`: 15 mutations on the Go source | PASS | PASS |
+| **Total** | **10 of 10 stages** | **10 of 10 stages** |
 
 Both interpreters, in the same run:
 
@@ -62,6 +64,21 @@ checked before either file was read:
 - 21 named probes and controls passed;
 - 56 preimages, 400 generated values, 0 divergences from `rfc8785` 0.1.4.
 
+### The Go reader
+
+The same corpus read by a second implementation in Go, built to a static binary
+(2,666,317 bytes, `CGO_ENABLED=0 -trimpath`) with Go 1.22.2 fetched inside the
+container:
+
+- `gofmt` clean, `go vet` clean, 40 probes passing;
+- reference rail 54 of 54, Go reader 54 of 54, 0 disagreements;
+- mutation matrix `coverage: 15 checks, 15 deny reasons, none uncovered`, with all
+  fifteen checks biting when disabled in the source and rebuilt.
+
+It is a port of the Python reader by the same author. It closes the "no second
+language" gap every earlier record named, and it does not close the "second
+author" one.
+
 ## Security result
 
 | Stage | Result |
@@ -72,6 +89,8 @@ checked before either file was read:
 | planted-secret control | fired on both the AWS key and the GitHub token pattern |
 | `py_compile` on every shipped module | clean |
 | `bash -n` on every shipped script | clean |
+| `go vet ./...` | clean |
+| `gosec` | **not run on VM2**: the box has 1.8 GB of RAM and building it pulls close to a gigabyte of modules, which the kernel kills. Run on a workstation instead: two findings (G304, G703) on the single `os.ReadFile` of the reader's own command-line argument, recorded and annotated as no privilege boundary; the rescan reports nothing |
 
 The scan was calibrated before it was trusted: a bare 64 hex character rule
 matches every sha256 digest in this tree and reports hundreds of false hits, so
@@ -137,6 +156,24 @@ The probe script gained one probe (38 to 39), the reader gained the negative-cou
 refusal, and the mutation script gained its coverage assertion and guard, so the
 gate was re-run three times on revised trees; the figures above are the last run's,
 on `896915fa`.
+
+### What the outside review found in the Go reader
+
+The same reviewer audited the Go implementation against the fifteen checks as
+stated. Ten findings, each tested before it was acted on:
+
+| Finding | Disposition |
+| --- | --- |
+| BLOCKER: attempts with no lease fields are allowed when no `leases` array exists, so check 6 is not enforced | **Refuted.** Twenty of the corpus's allow cases carry no `leases` array and no worker fields, and the corpus's own reference reader allows them. Requiring a lease for every attempt would make the corpus unsatisfiable, so the check reads a claim of a lease as the thing that must be verifiable. |
+| HIGH: an entry in `attempts` that is not an object is dropped, so the trail is judged as if the slot were empty | **Real, fixed.** Such a record now fails the identity check, and a probe pins it. |
+| HIGH: check 5 refuses a trigger that is not an object of a known kind | **Kept, by design.** A trigger the reader cannot read cannot be shown to carry the operation's key. Both readers take this reading and both pin it with probes. |
+| HIGH: an absent retention window is read as unlimited, and elapsed time was truncated to whole seconds | **Half real.** `keyRetentionSeconds: null` means no limit in the format's own declaration, so that part stands. The truncation was real and is now a duration comparison rather than an integer cast. |
+| HIGH: a final reconciliation stamped at the exact instant of the last unknown attempt counts as "after" it | **Kept, recorded as a ruling.** Both readers treat equality as after, because a second-resolution stamp at the same instant is the case where an absent answer most plausibly covers the dispatch. The corpus has no case at the boundary, so it cannot discriminate. |
+| MEDIUM: the same inclusivity in `absentAnswerBetween` | Same ruling, same reason. |
+| MEDIUM: check 13 refuses any post-revocation authority result that is not `refused`, where the text forbids only `accepted` | **Kept, fail-closed.** A result the reader cannot read is not evidence that authority was withheld. Same in both readers. |
+| MEDIUM: a negative ledger count is refused as `duplicate_effect`, which the literal predicates do not require | **Kept, decided on merit.** This is the same reviewer's earlier finding asking for exactly this refusal on the Python reader. Two passes contradicted each other; a ledger count of -1 is not a count of effects, and the stricter rule is the one a gate should hold. |
+| MEDIUM: a malformed `stop` collapses to "no stop" | **Recorded as a shared limitation.** The format has no reason for a malformed stop, and inventing one would put a word in the corpus's mouth. Both readers behave the same way. |
+| MEDIUM: the tests do not pin every check | **Real, fixed.** Eight probes added, taking the suite from 32 to 40, so each of the fifteen is reached directly. |
 
 ## What this does not establish
 
