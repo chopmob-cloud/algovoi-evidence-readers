@@ -94,9 +94,11 @@ direction, so they are pinned with a control on each side.
 - Not a blind result. The author had read the reference reader before writing
   this one, so the run is **directed**: it shows the checks are implementable by
   a second pair of hands, not that the text is determinate from a cold start.
-- One interpreter on one host. The 1 November record used CPython 3.12 and 3.11
-  in disposable Linux containers; the current record did not, so the second
-  interpreter and the container replay are outstanding rather than passed.
+- One interpreter on one host, in this record. That gap was closed afterwards: the
+  same scripts ran on VM2 in fresh containers on CPython 3.12 and 3.11, passing
+  8 of 8 stages on each, as recorded in
+  [`../VALIDATION-2026-11-20.md`](../VALIDATION-2026-11-20.md). What remains
+  unproven is a second implementation in another language.
 
 ## Run it
 
