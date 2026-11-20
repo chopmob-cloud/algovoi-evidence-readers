@@ -28,10 +28,13 @@ recomputes is two implementations agreeing rather than one function called twice
 
 ## Result
 
-Ten of ten cases match `expected.json`, including every `must_not_claim`
-prohibition, on CPython 3.12.16 and 3.11.15 in two clean-room rounds each. See
-[`RUN-2026-11-01.md`](RUN-2026-11-01.md) for the logs, the pinned digests, and what
-the run does not prove.
+Eleven of eleven cases match `expected.json` at the contract as it stands, including
+every `must_not_claim` prohibition, on CPython 3.14.9. See
+[`RUN-2026-11-20.md`](RUN-2026-11-20.md) for the pinned digests, the gates that ran
+beside the reader, and what the figure does not prove. The ten-case run on CPython
+3.12.16 and 3.11.15 in two clean-room rounds each is
+[`RUN-2026-11-01.md`](RUN-2026-11-01.md), and it is still true of that revision:
+what changed since is the contract, not the reader.
 
 `run_contract.py`, the contract author's own reader, was not read before this one
 was written. That is a claim about process and no log can evidence it; what the
@@ -44,9 +47,9 @@ not do.
 | Script | What it establishes |
 | --- | --- |
 | `run.sh` | Stages at the pinned commit, verifies both manifest digests before reading anything, then runs all four stages. Exits non-zero on any failure, including a stage that could not run. |
-| `check_requests_bite.py` | 41 checks. Every ordered check, disabled in turn, must turn the corpus red; every `must_not_claim` finding must have a mutation that produces it. A prohibition with no witness is untested. |
+| `check_requests_bite.py` | 45 checks at the current contract, 41 at the ten-case one. Every ordered check, disabled in turn, must turn the corpus red; every `must_not_claim` finding must have a mutation that produces it. A prohibition with no witness is untested. |
 | `check_named_probes.py` | 21 probes with controls, over shapes the corpus never builds: missing `attempt`, null-vs-absent `later_observation`, a covering decision that denies, an attempt naming the approved call, a boolean `attempt_seq`, a dispatched call under a refusal, a covering decision with nothing dispatched, and the two halves of the permission asymmetry. |
-| `differential_jcs.py` | The hand-written canonicaliser against `rfc8785` 0.1.4: 51 preimages, 51 re-derived refs, 400 generated values including the UTF-16 key-order and ECMAScript number-spelling cases that split naive implementations. |
+| `differential_jcs.py` | The hand-written canonicaliser against `rfc8785` 0.1.4: 56 preimages, 56 re-derived refs, 400 generated values including the UTF-16 key-order and ECMAScript number-spelling cases that split naive implementations. |
 
 ## Three things a green run did not catch
 
