@@ -111,6 +111,32 @@ for entry in manifest["vectors"]:
         print(entry["expected"]["reason"], entry["id"])
 PY
 
+# The matrix derives its list from the corpus's deny reasons, so a check with no
+# deny case would never be disabled and the run would still report green. Compare
+# the two sets here and fail when any check named by the reader has no case.
+python3 - "$READER" "$WORK/expected.tsv" <<'COVERAGE' || { echo "FAIL: a check has no deny case, so the matrix cannot exercise it"; failed=1; }
+import importlib.util
+import sys
+
+spec = importlib.util.spec_from_file_location("algovoi_uncertain_effect", sys.argv[1])
+if spec is None or spec.loader is None:
+    raise SystemExit(f"could not load the reader from {sys.argv[1]}")
+module = importlib.util.module_from_spec(spec)
+sys.modules[spec.name] = module
+spec.loader.exec_module(module)
+
+checks = set(module.FIRST_FAILING)
+if not checks:
+    print("the reader names no checks, so this coverage proves nothing")
+    raise SystemExit(1)
+reasons = {line.split()[0] for line in open(sys.argv[2], encoding="utf-8") if line.strip()}
+missing = checks - reasons
+if missing:
+    print("checks with no deny case: " + ", ".join(sorted(missing)))
+    raise SystemExit(1)
+print(f"coverage: {len(checks)} checks, {len(reasons)} deny reasons, none uncovered")
+COVERAGE
+
 while read -r reason; do
   [ -z "$reason" ] && continue
   mutant="$MUT/$reason.py"

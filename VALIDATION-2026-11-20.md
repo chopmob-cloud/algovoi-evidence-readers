@@ -2,8 +2,15 @@
 
 Build, functional validation and security validation of this repository on VM2,
 in fresh Docker containers, against the staged tree
-`da252f3f503a78926abd339b8a286f97b62a01b2` (source tarball sha256
-`bebc9ec9bcf61964f939361f2c6103d4f50f443aa32f722ea9c51d1c911886e8`).
+`896915fa8c07fedf50f0c03de216696fe1928e32` (source tarball sha256
+`eede2b50846fc26abc914eed56d90e41c76c56b9ab5090b3985224e499b5b6f1`).
+
+That tree is an index tree, not a commit: it is what `git write-tree` produced
+from the staged change, and `git archive` shipped those bytes. The commit that
+adds this record carries the same tree plus two documents, this one and the README
+section that links it, and nothing else: `git diff --stat 896915fa HEAD` prints
+those two paths. No script reads either, which is what lets the gate result
+transfer across the difference.
 
 Nothing here was run from a workstation. The tree was staged from `git archive`
 of the index, so what the containers read is what the repository holds, not a
@@ -43,7 +50,8 @@ Both interpreters, in the same run:
 - AlgoVoi reader through the external-verifier contract: 54 of 54 cases, 0 disagreements;
 - derived settled outcomes compared with the corpus declaration: 0 disagreements;
 - audit probes: 0 did not hold;
-- mutation matrix: 15 checks disabled in turn, every one turned the corpus red, 0 missed, and the edited record was named `owner_effect_unaccounted`.
+- mutation matrix: 15 checks disabled in turn, every one turned the corpus red, 0 missed, and the edited record was named `owner_effect_unaccounted`;
+- the matrix first asserts its own coverage, and prints `coverage: 15 checks, 15 deny reasons, none uncovered`, so a check with no deny case fails the gate instead of being quietly skipped.
 
 `request-effect` at `probityai.github.io` `808041f5`, with both manifest digests
 checked before either file was read:
@@ -60,7 +68,7 @@ checked before either file was read:
 | --- | --- |
 | `bandit` 1.8.6 over the whole tree | 0 issues |
 | `shellcheck` 0.11.0.1 at warning and above, every shipped script | 0 findings |
-| secret and workstation-path scan, calibrated | 21 files, 0 hits |
+| secret and workstation-path scan, calibrated | 22 files, 0 hits |
 | planted-secret control | fired on both the AWS key and the GitHub token pattern |
 | `py_compile` on every shipped module | clean |
 | `bash -n` on every shipped script | clean |
@@ -103,6 +111,32 @@ Windows run could see:
   before the fix; the `B311` (seeded `random` generating test values) is annotated
   as no-security-use rather than removed. `shellcheck` also flagged an unchecked
   `cd` in the mutation script, now `|| exit 1`.
+
+## What the outside review found
+
+An independent pass by OpenAI Codex (`gpt-5.6-terra`), given the tree and told to
+re-derive the claims and hunt for fail-open paths, returned six findings. Each was
+tested before it was acted on, and one was refuted:
+
+| Finding | Disposition |
+| --- | --- |
+| HIGH: the mutation loop disables only the deny reasons in the manifest, so with 14 deny reasons for 15 checks one predicate is never disabled | **Partly right, and acted on.** The count was wrong: the manifest carries 15 distinct deny reasons and the gate prints 15 `bites disable` lines, but the reviewer was quoting this repository's own text, which said 14. That was a defect in the document and is corrected. The structural point stood too: the loop trusted the corpus to cover every check, so it now asserts coverage and fails when a check has no deny case. |
+| HIGH: a negative `ownerEffects` passes both ledger checks, because `-1 > could` and `-1 > 1` are both false | **Real, fixed.** A record with `ownerEffects: -1` was allowed with exit 0; it now denies `duplicate_effect`. A probe holds it. |
+| MEDIUM: the request-effect digest stage accepts a manifest whose `sha256` mapping is empty, verifying nothing and reporting ok | **Real, fixed.** The stage now fails when either required digest is undeclared. |
+| MEDIUM: the recorded sha256 for `check_audit_probes.py` did not match the file | **Real, fixed.** The pin recorded the file before the review of the gate scripts, and the document was not updated with it. |
+| MEDIUM: the validated tree was cited as a commit and does not resolve in the published repository | **Real, fixed.** The record now says it is an index tree and gives the published commit's tree beside it. |
+| LOW: a reader that exits 0 with unparseable JSON lets the request-effect stage continue to `PASS` | **Real, fixed.** The parse is now a stage: an unreadable report fails rather than printing a summary. |
+
+A third pass on the coverage assertion confirmed it closes the finding and raises
+its own edge case: with an empty `FIRST_FAILING` the comparison is vacuous and
+prints "none uncovered". The stage now fails when the reader names no checks, and a
+control that blanks the tuple in a copy of the reader fails with that message and
+exit 1. That two-line guard has not itself been re-reviewed.
+
+The probe script gained one probe (38 to 39), the reader gained the negative-count
+refusal, and the mutation script gained its coverage assertion and guard, so the
+gate was re-run three times on revised trees; the figures above are the last run's,
+on `896915fa`.
 
 ## What this does not establish
 

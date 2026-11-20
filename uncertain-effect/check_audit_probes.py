@@ -81,7 +81,8 @@ def probes() -> list[tuple[str, dict, str, str]]:
 
     # 2. A ledger count that is not a count is not "at most one".
     for label, value in (("count as string", "1"), ("count as true", True),
-                         ("count as float", 1.0), ("count null", None)):
+                         ("count as float", 1.0), ("count null", None),
+                         ("count negative", -1)):
         out.append((label, record(ownerEffects=value), "deny", "duplicate_effect"))
     absent_count = record()
     if "ownerEffects" not in absent_count:

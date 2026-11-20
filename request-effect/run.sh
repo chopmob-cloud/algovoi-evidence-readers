@@ -60,8 +60,15 @@ $PYTHON - "$CONTRACT_DIR" <<'PY' || { echo "FAIL: manifest digests do not match"
 import hashlib, json, pathlib, sys
 root = pathlib.Path(sys.argv[1])
 man = json.loads((root / "fixtures" / "MANIFEST.json").read_text(encoding="utf-8"))
+declared = man.get("sha256") or {}
+# A manifest that pins nothing would verify nothing and report ok. The two files
+# this stage exists to authenticate must both be declared.
+missing = {"cases.json", "expected.json"} - set(declared)
+if missing:
+    print("manifest pins no digest for: " + ", ".join(sorted(missing)))
+    raise SystemExit(1)
 bad = 0
-for name, want in man["sha256"].items():
+for name, want in declared.items():
     path = root / "fixtures" / name if name == "cases.json" else root / name
     got = "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
     status = "ok" if got == want else "MISMATCH"
@@ -79,7 +86,7 @@ echo
 echo "=== reader against expected.json"
 $PYTHON "$READER" "$CASES" --expected "$EXPECTED" --json > "$WORK/reader.json"
 RC=$?
-$PYTHON - "$WORK/reader.json" <<'PY'
+$PYTHON - "$WORK/reader.json" <<'PY' || { echo "FAIL: the reader's output is not readable"; exit 1; }
 import json, sys
 from collections import Counter
 rows = json.load(open(sys.argv[1], encoding="utf-8"))

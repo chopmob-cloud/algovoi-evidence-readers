@@ -299,10 +299,12 @@ def owner_effect_unaccounted(trail: Trail) -> bool:
     a single effect fails here and not on the duplicate check.
 
     A ledger count the reader cannot read as a count is left to the duplicate
-    check, which names it, rather than being reported twice.
+    check, which names it, rather than being reported twice. A negative count is
+    one of those: an effect count cannot be below zero, so it is a count the
+    reader cannot accept rather than a ledger holding fewer than none.
     """
     count = trail.owner_effects
-    if isinstance(count, bool) or not isinstance(count, int):
+    if isinstance(count, bool) or not isinstance(count, int) or count < 0:
         return False
     could = sum(1 for item in trail.dispatches if item.get("reply") != "no_effect")
     return count > could
@@ -311,13 +313,13 @@ def owner_effect_unaccounted(trail: Trail) -> bool:
 def more_than_one_effect(trail: Trail) -> bool:
     """Whether the owner's ledger holds more than one effect.
 
-    A count that is not a count fails here too: `true` is not one effect, and a
-    ledger figure the reader cannot read is not something to pass. The corpus's
-    reason vocabulary has no malformed-record value, so the closest one names
-    the ledger count it could not accept.
+    A count that is not a count fails here too: `true` is not one effect, `-1` is
+    not a ledger with fewer than none, and a figure the reader cannot read is not
+    something to pass. The corpus's reason vocabulary has no malformed-record
+    value, so the closest one names the ledger count it could not accept.
     """
     count = trail.owner_effects
-    if isinstance(count, bool) or not isinstance(count, int):
+    if isinstance(count, bool) or not isinstance(count, int) or count < 0:
         return True
     return count > 1
 

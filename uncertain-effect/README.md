@@ -65,7 +65,7 @@ An outside audit of the first version of this reader found four places where it
 failed open and the 27 cases still passed, because the corpus never builds those
 shapes. All four are closed, and `check_audit_probes.py` holds each one shut with
 a control that must still pass. The same technique was applied to the five checks
-added for the current revision, which is where the other twenty probes come from:
+added for the current revision, which is where the other twenty-one probes come from:
 
 | Shape | Before | Now |
 | --- | --- | --- |
@@ -122,7 +122,7 @@ Pinned inputs, as reported by `run.sh`:
 | Corpus | `probityai/agent-evidence-vectors` at `6ba08cbe9d7f2819e3c47c84adee2fa65390e123`, `corpora/vectors-uncertain-effect` |
 | `corpusDigest` | `81e840e8585c20b07bf86394e2d0976f5b7db7801609ca7dc4af3c385d226bca` |
 | Harness | `agent-evidence-vectors==0.37.1` from PyPI (`Requires-Python >=3.11`) |
-| Reader | `algovoi_uncertain_effect.py`, sha256 `ba3a7b353ca401332fb5dec497acbec43b12f3c0c1676964cb571f917eb145a7` |
+| Reader | `algovoi_uncertain_effect.py`, sha256 `9593bf493e5fc0e0bcaa294b0090da0fd2a468c65266c368cf702c2ec1888845` |
 
 ## Licence
 
