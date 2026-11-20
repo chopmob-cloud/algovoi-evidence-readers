@@ -28,7 +28,8 @@ DIGEST = "sha256:" + "4" * 64
 
 def load_reader(path: Path):
     spec = importlib.util.spec_from_file_location("algovoi_uncertain_effect", path)
-    assert spec and spec.loader
+    if spec is None or spec.loader is None:
+        raise SystemExit(f"could not load the reader from {path}")
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
@@ -83,7 +84,8 @@ def probes() -> list[tuple[str, dict, str, str]]:
                          ("count as float", 1.0), ("count null", None)):
         out.append((label, record(ownerEffects=value), "deny", "duplicate_effect"))
     absent_count = record()
-    assert "ownerEffects" in absent_count, "record() no longer builds the key the probe removes"
+    if "ownerEffects" not in absent_count:
+        raise SystemExit("record() no longer builds the key the probe removes")
     absent_count.pop("ownerEffects")
     out.append(("count key absent", absent_count, "deny", "duplicate_effect"))
     out.append(("control: count 1", record(ownerEffects=1), "allow", "effect_held"))

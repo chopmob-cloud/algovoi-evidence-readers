@@ -26,7 +26,8 @@ EXPECTED = Path(sys.argv[2]) if len(sys.argv) > 2 else HERE / "expected.json"
 
 spec = importlib.util.spec_from_file_location(
     "algovoi_request_effect", HERE / "algovoi_request_effect.py")
-assert spec and spec.loader
+if spec is None or spec.loader is None:
+    raise SystemExit(f"could not load {HERE / 'algovoi_request_effect.py'}")
 R = importlib.util.module_from_spec(spec)
 sys.modules["algovoi_request_effect"] = R
 spec.loader.exec_module(R)

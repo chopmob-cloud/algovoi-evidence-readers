@@ -18,7 +18,7 @@ WORK="${WORK:-$HERE/.run}"
 READER="$HERE/algovoi_uncertain_effect.py"
 
 mkdir -p "$WORK"
-cd "$WORK"
+cd "$WORK" || exit 1
 if [ ! -d "corpus-$COMMIT" ]; then
   URL="https://codeload.github.com/probityai/agent-evidence-vectors/tar.gz/$COMMIT"
   if command -v curl >/dev/null 2>&1; then
@@ -35,16 +35,26 @@ if [ -d "$WORK/corpus-$COMMIT/corpora/vectors-uncertain-effect" ]; then
 else
   CORPUS="$WORK/corpus-$COMMIT/vectors-uncertain-effect"
 fi
-# A POSIX venv keeps its entry points in bin/, a Windows one in Scripts/.
-BIN="$WORK/venv/bin"
-[ -d "$BIN" ] || BIN="$WORK/venv/Scripts"
-if [ ! -x "$BIN/agent-evidence-vectors" ] && [ ! -x "$BIN/agent-evidence-vectors.exe" ]; then
+# A POSIX venv keeps its entry points in bin/, a Windows one in Scripts/. Resolve
+# that AFTER the venv exists: on a clean tree neither directory is there yet, and
+# resolving first picks Scripts on Linux and then calls a pip that was never made.
+venv_bin() {
+  if [ -x "$WORK/venv/bin/python" ] || [ -x "$WORK/venv/bin/python3" ]; then
+    printf '%s' "$WORK/venv/bin"
+  else
+    printf '%s' "$WORK/venv/Scripts"
+  fi
+}
+if [ ! -x "$WORK/venv/bin/agent-evidence-vectors" ] \
+   && [ ! -x "$WORK/venv/Scripts/agent-evidence-vectors" ] \
+   && [ ! -x "$WORK/venv/bin/agent-evidence-vectors.exe" ] \
+   && [ ! -x "$WORK/venv/Scripts/agent-evidence-vectors.exe" ]; then
   python3 -m venv "$WORK/venv"
+  BIN="$(venv_bin)"
   "$BIN/pip" install -q --upgrade pip
   "$BIN/pip" install -q "$HARNESS"
-  BIN="$WORK/venv/bin"
-  [ -d "$BIN" ] || BIN="$WORK/venv/Scripts"
 fi
+BIN="$(venv_bin)"
 RAIL="$BIN/agent-evidence-vectors"
 [ -x "$RAIL" ] || RAIL="$BIN/agent-evidence-vectors.exe"
 PY="$BIN/python"

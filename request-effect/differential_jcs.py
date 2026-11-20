@@ -24,7 +24,8 @@ import rfc8785
 HERE = Path(__file__).parent
 spec = importlib.util.spec_from_file_location(
     "algovoi_request_effect", HERE / "algovoi_request_effect.py")
-assert spec and spec.loader
+if spec is None or spec.loader is None:
+    raise SystemExit(f"could not load {HERE / 'algovoi_request_effect.py'}")
 R = importlib.util.module_from_spec(spec)
 sys.modules["algovoi_request_effect"] = R
 spec.loader.exec_module(R)
@@ -82,7 +83,7 @@ for case in cases:
                              f"rfc8785-derived {want}")
 
 # 3. Generated values in the shapes that split the two implementations.
-rng = random.Random(20261101)
+rng = random.Random(20261101)  # nosec B311 - seeded test data, no security use
 KEYS = ["", "a", "A", "z", "0", "1", "\n", " ", "\u007f", "\u0080", "\u20ac",
         "\ufb33", "\U0001f600", "\ud800", "key with space", "Ω", "e"]
 STRINGS = ["", "a", "\x00", "\x1f", "quote\"", "back\\slash", "\u007f", "\u0080",

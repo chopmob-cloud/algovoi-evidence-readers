@@ -24,7 +24,8 @@ from pathlib import Path
 
 def load_reader(path: Path):
     spec = importlib.util.spec_from_file_location("algovoi_uncertain_effect", path)
-    assert spec and spec.loader
+    if spec is None or spec.loader is None:
+        raise SystemExit(f"could not load the reader from {path}")
     module = importlib.util.module_from_spec(spec)
     # Register before executing: a module holding a dataclass is looked up in
     # sys.modules by dataclasses itself, and an unregistered one raises.

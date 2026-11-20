@@ -48,6 +48,16 @@ bash run.sh                  # stage the contract, check its digests, then reade
 `WORK=<dir>` moves the working directory; `COMMIT=`, `HARNESS=` and
 `SITE_COMMIT=` repin the inputs.
 
+## Validated on VM2
+
+Build, functional and security validation ran on VM2 in fresh Docker containers,
+on `python:3.12-slim` and at the floor the harness supports, `python:3.11-slim`,
+against a tree staged with `git archive`. Both legs passed 8 of 8 stages, with
+`bandit` and `shellcheck` clean, and three negative controls including a
+permissive verifier that the contract caught 34 times. The record, including the
+two defects the box found and the workstation could not, is
+[`VALIDATION-2026-11-20.md`](VALIDATION-2026-11-20.md).
+
 ## What a green figure establishes, and what it does not
 
 It establishes that the stated checks are implementable by a second pair of
