@@ -1,6 +1,5 @@
 # AlgoVoi evidence readers
 
-
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](./LICENSE)
 
 Two readers written by AlgoVoi for conformance corpora published by
