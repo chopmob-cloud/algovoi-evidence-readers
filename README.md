@@ -17,6 +17,7 @@ catch a misreading, because they all inherit it.
 | [`uncertain-effect/`](uncertain-effect/) | `corpora/vectors-uncertain-effect` in `probityai/agent-evidence-vectors`, 15 ordered checks over 54 cases | `6ba08cbe9d7f2819e3c47c84adee2fa65390e123` | 54 of 54 answered, 0 disagreements, reference rail also 54 of 54 |
 | [`request-effect/`](request-effect/) | `request-effect-join-fixture/v1` in `probityai/probityai.github.io`, 4 classifications and a closed set of 15 findings over 11 cases | `808041f552278a9708bd4903860e28fe07ef18d8` | 11 of 11 match `expected.json`, including every `must_not_claim` prohibition |
 | [`uncertain-effect-go/`](uncertain-effect-go/) | the same corpus and the same fifteen checks, in Go, built to a static binary | `6ba08cbe9d7f2819e3c47c84adee2fa65390e123` | 54 of 54 answered, 0 disagreements. A port of the Python reader by the same author, so a second language rather than a second author |
+| [`jcs-byte/`](jcs-byte/) | `corpora/jcs-byte-vectors` in `probityai/agent-evidence-vectors`, the byte oracle's own verifier contract, under both the `jcs` and `bounded` profiles | `227645518b00a2d44ac4c943cc49dcba1ceacae9` | 108 of 108 under `jcs`. The `bounded` profile disagrees at one drift case, which is a defect in how the driver applies its own admission profile; recorded in [`jcs-byte/RUN-2026-11-24.md`](jcs-byte/RUN-2026-11-24.md) |
 
 Each directory carries its own README, its scripts, and a run record per revision
 with the pinned inputs, the logs, and what the figure does not establish.
@@ -31,7 +32,9 @@ in that thread; the `uncertain-effect` reader is an outside implementation of a
 corpus neither of us wrote. AlgoVoi also contributed one case to the
 `request-effect-join` contract, S-10, a dispatched attempt whose outcome is not
 completed, which exercises a branch the contract named but the corpus did not
-build.
+build. The `jcs-byte` reader takes the byte oracle's own verifier contract
+instead of an invitation, and its run reports two disagreements inside the
+corpus's driver, both recorded in its own run record rather than asserted here.
 
 ## Run them
 
@@ -46,6 +49,10 @@ bash check_reader_bites.sh   # disable each check in turn and require the corpus
 
 cd ../request-effect
 bash run.sh                  # stage the contract, check its digests, then reader, bites, probes, canonicaliser
+
+cd ../jcs-byte
+bash run.sh                  # fetch the pinned corpus, check its digests, run both profiles
+bash check_canonical_bites.sh  # disable each rule in turn and require a named case to change
 ```
 
 `WORK=<dir>` moves the working directory; `COMMIT=`, `HARNESS=` and
