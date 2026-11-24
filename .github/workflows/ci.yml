@@ -1,0 +1,114 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Why this file exists: every figure this repository publishes is pinned to a
+# corpus commit. Nothing here notices when that commit moves, when the harness
+# releases, or when a reader regresses. These jobs re-run the same scripts a
+# reader would, at the two interpreter versions the readers were validated on,
+# and fail if a figure stops reproducing.
+#
+# The matrix is Linux only on purpose. The scripts resolve an interpreter, a
+# venv layout and a child-process path differently on Windows and macOS, and
+# only Linux and MSYS have been exercised by hand. Adding those legs before they
+# have been proven green would put a red status on an untested claim, not on a
+# defect, so they are a follow-up with their own evidence.
+
+jobs:
+  readers:
+    name: readers (py${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Interpreter under test
+        run: |
+          python -VV
+          node -v
+          echo "PYTHON=$(command -v python)" >> "$GITHUB_ENV"
+
+      - name: uncertain-effect, reference rail and this reader
+        run: bash uncertain-effect/run.sh
+        env:
+          WORK: ${{ runner.temp }}/uncertain-effect
+
+      - name: uncertain-effect, every check must bite
+        run: bash uncertain-effect/check_reader_bites.sh
+        env:
+          WORK: ${{ runner.temp }}/uncertain-effect
+
+      - name: Install the independent canonicaliser the differential compares against
+        run: python -m pip install --quiet "rfc8785==0.1.4"
+
+      - name: request-effect, contract digests then this reader
+        run: bash request-effect/run.sh
+        env:
+          WORK: ${{ runner.temp }}/request-effect
+
+      - name: jcs-byte, the byte oracle under both profiles
+        run: bash jcs-byte/run.sh
+        env:
+          WORK: ${{ runner.temp }}/jcs-byte
+
+      - name: jcs-byte, every rule must bite
+        run: bash jcs-byte/check_canonical_bites.sh
+        env:
+          WORK: ${{ runner.temp }}/jcs-byte
+
+      - name: No answer-file lookup in a reader
+        run: |
+          if grep -nE 'MANIFEST\.json|expected\.json' uncertain-effect/algovoi_uncertain_effect.py; then
+            echo "a reader names the corpus answer files"; exit 1
+          fi
+
+      - name: Upload the run records
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: runs-py${{ matrix.python }}
+          path: |
+            ${{ runner.temp }}/uncertain-effect/*.log
+            ${{ runner.temp }}/uncertain-effect/*.txt
+            ${{ runner.temp }}/request-effect/*.json
+          if-no-files-found: warn
+
+  go:
+    name: go reader
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: uncertain-effect-go
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+
+      - name: vet
+        run: go vet ./...
+
+      - name: test
+        run: go test ./...
+
+      - name: build static binary
+        run: go build -trimpath -o "$RUNNER_TEMP/uncertain-effect-go" .

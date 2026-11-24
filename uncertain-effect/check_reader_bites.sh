@@ -13,6 +13,7 @@ set -uo pipefail
 
 COMMIT="${COMMIT:-6ba08cbe9d7f2819e3c47c84adee2fa65390e123}"
 HARNESS="${HARNESS:-agent-evidence-vectors==0.37.1}"
+PYTHON="${PYTHON:-python3}"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORK="${WORK:-$HERE/.run}"
 READER="$HERE/algovoi_uncertain_effect.py"
@@ -24,7 +25,7 @@ if [ ! -d "corpus-$COMMIT" ]; then
   if command -v curl >/dev/null 2>&1; then
     curl -sSfL "$URL" -o aev.tgz
   else
-    python3 -c "import sys,urllib.request; urllib.request.urlretrieve(sys.argv[1], sys.argv[2])" "$URL" aev.tgz
+    $PYTHON -c "import sys,urllib.request; urllib.request.urlretrieve(sys.argv[1], sys.argv[2])" "$URL" aev.tgz
   fi
   tar xzf aev.tgz && mv "agent-evidence-vectors-$COMMIT" "corpus-$COMMIT" && rm aev.tgz
 fi
@@ -49,10 +50,10 @@ if [ ! -x "$WORK/venv/bin/agent-evidence-vectors" ] \
    && [ ! -x "$WORK/venv/Scripts/agent-evidence-vectors" ] \
    && [ ! -x "$WORK/venv/bin/agent-evidence-vectors.exe" ] \
    && [ ! -x "$WORK/venv/Scripts/agent-evidence-vectors.exe" ]; then
-  python3 -m venv "$WORK/venv"
+  $PYTHON -m venv "$WORK/venv"
   BIN="$(venv_bin)"
-  "$BIN/pip" install -q --upgrade pip
-  "$BIN/pip" install -q "$HARNESS"
+  "$BIN/python" -m pip install -q --upgrade pip
+  "$BIN/python" -m pip install -q "$HARNESS"
 fi
 BIN="$(venv_bin)"
 RAIL="$BIN/agent-evidence-vectors"
@@ -70,7 +71,7 @@ fi
 # reads as a failing reader rather than a broken harness call. Hand the child the
 # Windows form of both pieces when the host is Windows.
 NATIVE_PATHS=0
-VERIFIER_PY="python3"
+VERIFIER_PY="$PYTHON"
 case "$(uname -s)" in
   MSYS*|MINGW*|CYGWIN*)
     if command -v cygpath >/dev/null 2>&1; then
@@ -84,7 +85,7 @@ run_reader() {  # $1 = reader path ; $2 = log path ; prints exit code
   if [ "$NATIVE_PATHS" -eq 1 ]; then
     "$RAIL" --vectors "$CORPUS" --verifier "$VERIFIER_PY $(cygpath -m "$1")" >"$2" 2>&1
   else
-    "$RAIL" --vectors "$CORPUS" --verifier "python3 $1" >"$2" 2>&1
+    "$RAIL" --vectors "$CORPUS" --verifier "$PYTHON $1" >"$2" 2>&1
   fi
   echo $?
 }
@@ -103,7 +104,7 @@ failed=0
 
 # reason -> ids expecting it, read straight out of the corpus manifest.
 # Only deny reasons name a check; the allow reason is the pass marker.
-python3 - "$CORPUS/MANIFEST.json" > "$WORK/expected.tsv" <<'PY'
+$PYTHON - "$CORPUS/MANIFEST.json" > "$WORK/expected.tsv" <<'PY'
 import json, sys
 manifest = json.load(open(sys.argv[1], encoding="utf-8"))
 for entry in manifest["vectors"]:
@@ -114,7 +115,9 @@ PY
 # The matrix derives its list from the corpus's deny reasons, so a check with no
 # deny case would never be disabled and the run would still report green. Compare
 # the two sets here and fail when any check named by the reader has no case.
-python3 - "$READER" "$WORK/expected.tsv" <<'COVERAGE' || { echo "FAIL: a check has no deny case, so the matrix cannot exercise it"; failed=1; }
+READER_FOR_PY="$READER"
+[ "$NATIVE_PATHS" -eq 1 ] && READER_FOR_PY="$(cygpath -m "$READER")"
+$PYTHON - "$READER_FOR_PY" "$WORK/expected.tsv" <<'COVERAGE' || { echo "FAIL: a check has no deny case, so the matrix cannot exercise it"; failed=1; }
 import importlib.util
 import sys
 
@@ -170,12 +173,12 @@ if [ ! -f "$CORRUPT/record.json" ]; then
   # attempt, so the edited record is two effects against one attempt.
   for candidate in "$CORPUS"/cases/allow-*; do
     if [ -f "$candidate/record.json" ] \
-       && python3 -c "import json,sys; r=json.load(open(sys.argv[1])); sys.exit(0 if len(r.get('attempts') or [])==1 else 1)" "$candidate/record.json"; then
+       && $PYTHON -c "import json,sys; r=json.load(open(sys.argv[1])); sys.exit(0 if len(r.get('attempts') or [])==1 else 1)" "$candidate/record.json"; then
       rm -rf "$CORRUPT"; cp -r "$candidate" "$CORRUPT"; break
     fi
   done
 fi
-python3 - "$CORRUPT/record.json" <<'PY'
+$PYTHON - "$CORRUPT/record.json" <<'PY'
 import json, sys
 path = sys.argv[1]
 record = json.load(open(path, encoding="utf-8"))

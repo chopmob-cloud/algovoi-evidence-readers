@@ -7,10 +7,12 @@
 # machine-readable summary, and exits non-zero if either rail disagrees.
 #
 # Needs: python3 with venv, network once (pip and the corpus tarball), bash.
+# Env: WORK (working directory), PYTHON (default python3), COMMIT, HARNESS.
 set -euo pipefail
 
 COMMIT="${COMMIT:-6ba08cbe9d7f2819e3c47c84adee2fa65390e123}"
 HARNESS="${HARNESS:-agent-evidence-vectors==0.37.1}"
+PYTHON="${PYTHON:-python3}"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORK="${WORK:-$HERE/.run}"
 
@@ -23,7 +25,7 @@ if [ ! -d "corpus-$COMMIT" ]; then
     curl -sSfL "$URL" -o aev.tgz
   else
     # python:*-slim images carry no curl; fetch with the interpreter under test.
-    python3 -c "import sys,urllib.request; urllib.request.urlretrieve(sys.argv[1], sys.argv[2])" "$URL" aev.tgz
+    $PYTHON -c "import sys,urllib.request; urllib.request.urlretrieve(sys.argv[1], sys.argv[2])" "$URL" aev.tgz
   fi
   tar xzf aev.tgz
   mv "agent-evidence-vectors-$COMMIT" "corpus-$COMMIT"
@@ -51,10 +53,10 @@ if [ ! -x "$WORK/venv/bin/agent-evidence-vectors" ] \
    && [ ! -x "$WORK/venv/Scripts/agent-evidence-vectors" ] \
    && [ ! -x "$WORK/venv/bin/agent-evidence-vectors.exe" ] \
    && [ ! -x "$WORK/venv/Scripts/agent-evidence-vectors.exe" ]; then
-  python3 -m venv "$WORK/venv"
+  $PYTHON -m venv "$WORK/venv"
   BIN="$(venv_bin)"
-  "$BIN/pip" install -q --upgrade pip
-  "$BIN/pip" install -q "$HARNESS"
+  "$BIN/python" -m pip install -q --upgrade pip
+  "$BIN/python" -m pip install -q "$HARNESS"
 fi
 BIN="$(venv_bin)"
 RAIL="$BIN/agent-evidence-vectors"
@@ -72,7 +74,7 @@ printf 'reference rail: %s\n' "$(tail -1 reference.log)"
 # that cannot open the reader reports every case as a disagreement, which reads as
 # a failing reader rather than a broken harness call. Use the Windows form of both
 # pieces when the host is Windows.
-VERIFIER="python3 $HERE/algovoi_uncertain_effect.py"
+VERIFIER="$PYTHON $HERE/algovoi_uncertain_effect.py"
 WINDOWS_PATHS=0
 case "$(uname -s)" in
   MSYS*|MINGW*|CYGWIN*)
