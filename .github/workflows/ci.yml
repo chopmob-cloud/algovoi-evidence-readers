@@ -56,6 +56,9 @@ jobs:
         env:
           WORK: ${{ runner.temp }}/uncertain-effect
 
+      - name: Install the independent canonicaliser the differential compares against
+        run: python -m pip install --quiet "rfc8785==0.1.4"
+
       - name: request-effect, contract digests then this reader
         run: bash request-effect/run.sh
         env:
